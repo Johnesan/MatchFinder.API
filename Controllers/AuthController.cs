@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using DatingApp.API.Data;
 using DatingApp.API.DTOs;
 using DatingApp.API.Models;
@@ -17,8 +18,10 @@ namespace DatingApp.API.Controllers
     {
         private readonly IAuthRepository _repo;
         private readonly IConfiguration _config;
-        public AuthController(IAuthRepository repo, IConfiguration config)
+        private readonly IMapper _mapper;
+        public AuthController(IAuthRepository repo, IConfiguration config, IMapper mapper)
         {
+            _mapper = mapper;
             this._config = config;
             this._repo = repo;
         }
@@ -26,11 +29,11 @@ namespace DatingApp.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserForRegisterDTO userForRegisterDTO)
         {
-            if(!string.IsNullOrEmpty(userForRegisterDTO.Username))
+            if (!string.IsNullOrEmpty(userForRegisterDTO.Username))
             {
                 userForRegisterDTO.Username = userForRegisterDTO.Username.ToLower();
             }
-            
+
             if (await _repo.UserExists(userForRegisterDTO.Username))
             {
                 ModelState.AddModelError("Username", "Username already exists");
@@ -55,7 +58,7 @@ namespace DatingApp.API.Controllers
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody]UserForLoginDTO userForLoginDTO)
-        {            
+        {
             var userFromRepo = await _repo.Login(userForLoginDTO.Username, userForLoginDTO.Password);
 
             if (userFromRepo == null)
@@ -80,7 +83,9 @@ namespace DatingApp.API.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
-            return Ok(new { tokenString });
+            var user = _mapper.Map<UserForListDTO>(userFromRepo);
+
+            return Ok(new { tokenString, user });
         }
     }
 }
